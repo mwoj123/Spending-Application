@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 #import matplotlib.pyplot as plt
-from scipy.stats import norm
-import math
-import random
-import statistics
+#from scipy.stats import norm
+#import math
+#import random
+#import statistics
 import streamlit as st
 #from spendingfunctions import constant_spend
-import time
+#import time
 
 
 
