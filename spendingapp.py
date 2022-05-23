@@ -6,7 +6,6 @@ import pandas as pd
 #import random
 #import statistics
 import streamlit as st
-#from spendingfunctions import constant_spend
 #import time
 
 
@@ -103,7 +102,7 @@ if spending_plan == 'Constant (single spend rate)':
         percentiles_nominal = portfolio_nom_df.quantile(options, axis = 1)
         percentiles_nominal = pd.DataFrame.transpose(percentiles_nominal)
         st.markdown('## Projected Nominal Market Values')
-        st.write(f'Expected nominal return of {annual_ret*100}%')
+        st.write(f'Expected nominal return of {(annual_ret*100):.2f}%')
         st.line_chart(percentiles_nominal)
         percentiles_nom_spend = spend_nom_df.quantile(options, axis = 1) 
         percentiles_nom_spend = pd.DataFrame.transpose(percentiles_nom_spend)
