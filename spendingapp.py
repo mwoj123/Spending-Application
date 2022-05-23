@@ -6,7 +6,7 @@ import math
 import random
 import statistics
 import streamlit as st
-from spendingfunctions import constant_spend
+#from spendingfunctions import constant_spend
 import time
 
 
