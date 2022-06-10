@@ -25,6 +25,7 @@ uploaded_file = st.sidebar.file_uploader(f'Drop in Excel with {rolling_quarters}
 if uploaded_file is not None:
     historic_values = pd.read_excel(uploaded_file)
     st.sidebar.dataframe(historic_values)
+    st.sidebar.write('Important: The length of the above cells should be 1 less than the rolling period (ex - if 20, length of 19)')
 
 
 sim = []
