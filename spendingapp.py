@@ -24,6 +24,7 @@ rolling_quarters = st.sidebar.text_input("How many rolling quarters are used in 
 uploaded_file = st.sidebar.file_uploader(f'Drop in Excel with {rolling_quarters} historical quarterly market values')
 if uploaded_file is not None:
     historic_values = pd.read_excel(uploaded_file)
+    st.sidebar.dataframe(historic_values)
 
 
 sim = []
