@@ -1,6 +1,6 @@
 numpy==1.21.5
-matplotlib.pyplot
+matplotlib==3.5.1
 pandas==1.2.5
 streamlit==1.9.0
-plotly.express
+plotly==5.6.0
 openpyxl
