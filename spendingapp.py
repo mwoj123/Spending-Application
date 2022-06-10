@@ -202,14 +202,14 @@ with col1:
     if spending_plan_1 == 'Constant (single spend rate)':
         annual_return_1 = annual_return()
         if annual_return_1 is not '':
-            st.write(f'(Annual real return of {int(annual_return_1) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_1) - float(cpi)})')
         annual_std_1 = annual_std()
         annual_spending_1 = annual_spending()
         
     elif spending_plan_1 == 'Variable (multiple spend rates)':
         annual_return_1 = annual_return()
         if annual_return_1 is not '':
-            st.write(f'(Annual real return of {int(annual_return_1) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_1) - float(cpi)})')
         annual_std_1 = annual_std()
         annual_spending_initial_1 = annual_spending_initial()
         annual_spending_initial_duration_1 = annual_spending_initial_duration()
@@ -226,13 +226,13 @@ with col2:
     if spending_plan_2 == 'Constant (single spend rate)':
         annual_return_2 = annual_return()
         if annual_return_2 is not '':
-            st.write(f'(Annual real return of {int(annual_return_2) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_2) - float(cpi)})')
         annual_std_2 = annual_std()
         annual_spending_2 = annual_spending()
     elif spending_plan_2 == 'Variable (multiple spend rates)':
         annual_return_2 = annual_return()
         if annual_return_2 is not '':
-            st.write(f'(Annual real return of {int(annual_return_2) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_2) - float(cpi)})')
         annual_std_2 = annual_std()
         annual_spending_initial_2 = annual_spending_initial()
         annual_spending_initial_duration_2 = annual_spending_initial_duration()
@@ -249,13 +249,13 @@ with col3:
     if spending_plan_3 == 'Constant (single spend rate)':
         annual_return_3 = annual_return()
         if annual_return_3 is not '':
-            st.write(f'(Annual real return of {int(annual_return_3) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_3) - float(cpi)})')
         annual_std_3 = annual_std()
         annual_spending_3 = annual_spending()
     elif spending_plan_3 == 'Variable (multiple spend rates)':
         annual_return_3 = annual_return()
         if annual_return_3 is not '':
-            st.write(f'(Annual real return of {int(annual_return_3) - int(cpi)})')
+            st.write(f'(Annual real return of {float(annual_return_3) - float(cpi)})')
         annual_std_3 = annual_std()
         annual_spending_initial_3 = annual_spending_initial()
         annual_spending_initial_duration_3 = annual_spending_initial_duration()
