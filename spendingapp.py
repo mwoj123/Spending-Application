@@ -11,8 +11,9 @@ st.cache(allow_output_mutation=True)
 
 
 st.title('Endowment Spending Simulator')
-
+st.write('Important: Before proceeding below, complete the required inputs in the left hand column')
 # Questions to gather input
+st.sidebar.markdown('## Enter Below Variables First')
 cpi = st.sidebar.text_input("Enter an estimate for inflation (ex - difference between real and nominal expected return)")
 t_intervals = st.sidebar.text_input("What is the simulation period? Enter in quarters (ex - 10 years = 40)")
 options = st.sidebar.multiselect(
@@ -200,11 +201,15 @@ with col1:
     )
     if spending_plan_1 == 'Constant (single spend rate)':
         annual_return_1 = annual_return()
+        if annual_return_1 is not '':
+            st.write(f'(Annual real return of {int(annual_return_1) - int(cpi)})')
         annual_std_1 = annual_std()
         annual_spending_1 = annual_spending()
         
     elif spending_plan_1 == 'Variable (multiple spend rates)':
         annual_return_1 = annual_return()
+        if annual_return_1 is not '':
+            st.write(f'(Annual real return of {int(annual_return_1) - int(cpi)})')
         annual_std_1 = annual_std()
         annual_spending_initial_1 = annual_spending_initial()
         annual_spending_initial_duration_1 = annual_spending_initial_duration()
@@ -220,10 +225,14 @@ with col2:
     )
     if spending_plan_2 == 'Constant (single spend rate)':
         annual_return_2 = annual_return()
+        if annual_return_2 is not '':
+            st.write(f'(Annual real return of {int(annual_return_2) - int(cpi)})')
         annual_std_2 = annual_std()
         annual_spending_2 = annual_spending()
     elif spending_plan_2 == 'Variable (multiple spend rates)':
         annual_return_2 = annual_return()
+        if annual_return_2 is not '':
+            st.write(f'(Annual real return of {int(annual_return_2) - int(cpi)})')
         annual_std_2 = annual_std()
         annual_spending_initial_2 = annual_spending_initial()
         annual_spending_initial_duration_2 = annual_spending_initial_duration()
@@ -239,10 +248,14 @@ with col3:
     )
     if spending_plan_3 == 'Constant (single spend rate)':
         annual_return_3 = annual_return()
+        if annual_return_3 is not '':
+            st.write(f'(Annual real return of {int(annual_return_3) - int(cpi)})')
         annual_std_3 = annual_std()
         annual_spending_3 = annual_spending()
     elif spending_plan_3 == 'Variable (multiple spend rates)':
         annual_return_3 = annual_return()
+        if annual_return_3 is not '':
+            st.write(f'(Annual real return of {int(annual_return_3) - int(cpi)})')
         annual_std_3 = annual_std()
         annual_spending_initial_3 = annual_spending_initial()
         annual_spending_initial_duration_3 = annual_spending_initial_duration()
@@ -357,6 +370,8 @@ if not nom_check and st.button('Compute'):
         plt.plot(percentiles_real_3, color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
 
@@ -376,7 +391,7 @@ if not nom_check and st.button('Compute'):
     fig = plt.figure(figsize=(10,6))
     plt.title('Quarterly Spending Power by Percentile')
     plt.xlabel('Qtrs')
-    plt.ylabel('Portfolio Value')
+    plt.ylabel('Quarterly Dollars Spent')
     plt.plot(percentiles_real_spend_1, color = 'royalblue', label = 'Sim 1')
     if spending_plan_2 is not '':
         plt.plot(percentiles_real_spend_2, color = 'red', label = 'Sim 2')
@@ -384,6 +399,8 @@ if not nom_check and st.button('Compute'):
         plt.plot(percentiles_real_spend_3, color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
 
@@ -392,7 +409,7 @@ if not nom_check and st.button('Compute'):
     fig = plt.figure(figsize=(10,6))
     plt.title('Cumulative Dollars Spent by Percentile')
     plt.xlabel('Qtrs')
-    plt.ylabel('Portfolio Value')
+    plt.ylabel('Cumulative Dollars Spent')
     plt.plot(percentiles_real_spend_1.cumsum(), color = 'royalblue', label = 'Sim 1')
     if spending_plan_2 is not '':
         plt.plot(percentiles_real_spend_2.cumsum(), color = 'red', label = 'Sim 2')
@@ -400,6 +417,8 @@ if not nom_check and st.button('Compute'):
         plt.plot(percentiles_real_spend_3.cumsum(), color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
     # Organizes percentiles into one combined dataframe to be able to download as CSV
@@ -532,6 +551,8 @@ elif nom_check and st.button('Compute'):
         plt.plot(percentiles_nominal_3, color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
 
@@ -549,7 +570,7 @@ elif nom_check and st.button('Compute'):
     fig = plt.figure(figsize=(10,6))
     plt.title('Quarterly Spending Power by Percentile')
     plt.xlabel('Qtrs')
-    plt.ylabel('Portfolio Value')
+    plt.ylabel('Quarterly Dollars Spent')
     plt.plot(percentiles_nom_spend_1, color = 'royalblue', label = 'Sim 1')
     if spending_plan_2 is not '':
         plt.plot(percentiles_nom_spend_2, color = 'red', label = 'Sim 2')
@@ -557,13 +578,15 @@ elif nom_check and st.button('Compute'):
         plt.plot(percentiles_nom_spend_3, color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
     # Plots user selected percentiles by cumulative $ spent
     fig = plt.figure(figsize=(10,6))
     plt.title('Cumulative Dollars Spent by Percentile')
     plt.xlabel('Qtrs')
-    plt.ylabel('Portfolio Value')
+    plt.ylabel('Cumulative Dollars Spent')
     plt.plot(percentiles_nom_spend_1.cumsum(), color = 'royalblue', label = 'Sim 1')
     if spending_plan_2 is not '':
         plt.plot(percentiles_nom_spend_2.cumsum(), color = 'red', label = 'Sim 2')
@@ -571,6 +594,8 @@ elif nom_check and st.button('Compute'):
         plt.plot(percentiles_nom_spend_3.cumsum(), color = 'mediumseagreen', label = 'Sim 3')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.ticklabel_format(style='plain')
+    current_values = plt.gca().get_yticks()
+    plt.gca().set_yticklabels(['{:,.0f}'.format(x) for x in current_values])
     st.pyplot(fig)
 
     # Organizes percentiles into one combined dataframe to be able to download as CSV
