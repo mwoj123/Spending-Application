@@ -33,7 +33,7 @@ sim = []
 # Functions to gather input for variables in each simulation
 
 def annual_return():
-    annual_ret = st.text_input(f"Nominal annualized expected return for Sim {sim}")
+    annual_ret = st.text_input(f"Nominal arithmetic annualized expected return for Sim {sim}")
     return annual_ret
 
 def annual_std():
