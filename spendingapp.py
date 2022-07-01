@@ -10,6 +10,7 @@ import plotly.express as px
 st.cache(allow_output_mutation=True)
 
 
+
 st.title('Endowment Spending Simulator')
 st.write('Important: Before proceeding below, complete the required inputs in the left hand column')
 # Questions to gather input
@@ -21,16 +22,38 @@ options = st.sidebar.multiselect(
         [.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95]
         )
 rolling_quarters = st.sidebar.text_input("How many rolling quarters are used in the spending calculation methodlogy?")
-uploaded_file = st.sidebar.file_uploader(f'Drop in Excel with {rolling_quarters} historical quarterly market values')
+uploaded_file = st.sidebar.file_uploader('Drop in Excel with historical quarterly market values. The number of historical market values provided should equal the ROLLING period.')
 if uploaded_file is not None:
     historic_values = pd.read_excel(uploaded_file)
     st.sidebar.dataframe(historic_values)
-    st.sidebar.write('Important: The length of the above cells should be 1 less than the rolling period (ex - if 20, length of 19)')
+    if len(historic_values) != int(rolling_quarters):
+        st.sidebar.write(':x: Error. Check length of provided market values.')
+    else:
+        st.sidebar.write(':white_check_mark: Confirmed length of provided market values')
+uploaded_file_2 = st.sidebar.file_uploader('Drop in Excel if any fixed activity. Enter withdrawals as a negative (-) and contributions as a positive (+) number.')
+if uploaded_file_2 is not None:
+    fixed_activity_upload = pd.read_excel(uploaded_file_2)
+    t_intervals_slice = int(t_intervals)
+    fixed_spending_activity = pd.DataFrame(fixed_activity_upload.iloc[0:t_intervals_slice,1]).fillna(0)
+    other_fixed_activity = pd.DataFrame(fixed_activity_upload.iloc[0:t_intervals_slice,2]).fillna(0)
+    st.sidebar.write('Fixed Spending by Period (values entered should typically be negative, otherwise will reduce / serve as an offset to dollars spent):')
+    st.sidebar.dataframe(fixed_spending_activity)
+    st.sidebar.write('Other Fixed Activity by Period (negative values for outflows and positive values for inflows):')
+    st.sidebar.dataframe(other_fixed_activity)
+
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
+st.sidebar.text('')
 
 
 sim = []
 
-# Functions to gather input for variables in each simulation
+# Functions to gather input for variables in each simulation.
 
 def annual_return():
     annual_ret = st.text_input(f"Nominal arithmetic annualized expected return for Sim {sim}")
@@ -83,14 +106,28 @@ def compute_constant(annual_ret, annual_std, annual_spending, rolling_quarters, 
     time_zero = rolling_quarters - 1
     inflation_discounter = np.zeros_like(quarterly_returns)
     inflation_discounter[0:rolling_quarters] = 1
+    # Fixed Activity
+    other_fixed_activity_sim = np.zeros_like(quarterly_returns)
+    other_fixed_activity_sim[0:rolling_quarters] = 0
+    fixed_spending_activity_sim = np.zeros_like(quarterly_returns)
+    fixed_spending_activity_sim[0:rolling_quarters] = 0
+    if uploaded_file_2 is not None:
+        other_fixed_activity_sim[rolling_quarters:] = other_fixed_activity[0:]
+        fixed_spending_activity_sim[rolling_quarters:] = fixed_spending_activity[0:]
+    else:
+        other_fixed_activity_sim[rolling_quarters:] = 0
+        fixed_spending_activity_sim[rolling_quarters:] = 0
+        
+
+
 
     for t in range (rolling_quarters, t_intervals):
         IC_mv = pd.DataFrame(portfolio)
         IC_rolling_mv = IC_mv.rolling(rolling_quarters, min_periods=1).mean()
         IC_rolling_mv = np.array(IC_rolling_mv)
-        spend[0] = quarterly_spending*IC_rolling_mv[0]
-        spend[t] = quarterly_spending*IC_rolling_mv[t-1]
-        portfolio[t] = (portfolio[t-1]*quarterly_returns[t])-spend[t]
+        #spend[0] = (quarterly_spending*IC_rolling_mv[0])-fixed_spending_activity_sim[t]
+        spend[t] = (quarterly_spending*IC_rolling_mv[t-1])-fixed_spending_activity_sim[t]
+        portfolio[t] = (portfolio[t-1]*quarterly_returns[t])-spend[t]+other_fixed_activity_sim[t]
         inflation_discounter[t] = inflation_discounter[t-1] * quarter_cpi[t]
         portfolio_real[t] = (portfolio[t] / inflation_discounter[t])
         spend_real[t] = (spend[t] / inflation_discounter[t])
@@ -150,6 +187,17 @@ def compute_variable(annual_ret, annual_std, annual_spending_initial, annual_spe
     time_zero = rolling_quarters - 1
     inflation_discounter = np.zeros_like(quarterly_returns)
     inflation_discounter[0:rolling_quarters] = 1
+    # Fixed Activity
+    other_fixed_activity_sim = np.zeros_like(quarterly_returns)
+    other_fixed_activity_sim[0:rolling_quarters] = 0
+    fixed_spending_activity_sim = np.zeros_like(quarterly_returns)
+    fixed_spending_activity_sim[0:rolling_quarters] = 0
+    if uploaded_file_2 is not None:
+        other_fixed_activity_sim[rolling_quarters:] = other_fixed_activity[0:]
+        fixed_spending_activity_sim[rolling_quarters:] = fixed_spending_activity[0:]
+    else:
+        other_fixed_activity_sim[rolling_quarters:] = 0
+        fixed_spending_activity_sim[rolling_quarters:] = 0
     
     #simulation
     for t in range (rolling_quarters, t_intervals):
@@ -160,8 +208,8 @@ def compute_variable(annual_ret, annual_std, annual_spending_initial, annual_spe
             quarterly_spending = quarterly_spending_initial
         else: 
             quarterly_spending = quarterly_spending_final
-        spend[t] = quarterly_spending*IC_rolling_mv[t-1]
-        portfolio[t] = (portfolio[t-1]*quarterly_returns[t])-spend[t]
+        spend[t] = (quarterly_spending*IC_rolling_mv[t-1])-fixed_spending_activity_sim[t]
+        portfolio[t] = (portfolio[t-1]*quarterly_returns[t])-spend[t]+other_fixed_activity_sim[t]
         inflation_discounter[t] = inflation_discounter[t-1] * quarter_cpi[t]
         portfolio_real[t] = (portfolio[t] / inflation_discounter[t])
         spend_real[t] = (spend[t] / inflation_discounter[t])
@@ -267,46 +315,69 @@ with col3:
 st.write('Select for Nominal Terms. Unselect for Real Terms.')
 nom_check = st.checkbox('Nominal Terms')
 
+
+
 # Computes the user input results if real terms is preferred
 # Returns several dataframe/list objects to be used in charting below
 
 if not nom_check and st.button('Compute'):
     if spending_plan_1 == 'Constant (single spend rate)':
-        portfolio_real_df_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_constant(annual_return_1, annual_std_1, annual_spending_1, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_constant(annual_return_1, annual_std_1, annual_spending_1, rolling_quarters, cpi, t_intervals)
+        input_data_1 = pd.DataFrame({'Sim1 Inputs': [annual_return_1,annual_std_1,annual_spending_1,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     elif spending_plan_1 == 'Variable (multiple spend rates)':
-        portfolio_real_df_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_variable(annual_return_1, annual_std_1, annual_spending_initial_1, annual_spending_initial_duration_1, annual_spending_final_1, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_variable(annual_return_1, annual_std_1, annual_spending_initial_1, annual_spending_initial_duration_1, annual_spending_final_1, rolling_quarters, cpi, t_intervals)
+        input_data_1 = pd.DataFrame({'Sim1 Inputs': [annual_return_1,annual_std_1,'NA', annual_spending_initial_1,annual_spending_initial_duration_1,annual_spending_final_1,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     if spending_plan_2 == 'Constant (single spend rate)':
-        portfolio_real_df_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_constant(annual_return_2, annual_std_2, annual_spending_2, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_constant(annual_return_2, annual_std_2, annual_spending_2, rolling_quarters, cpi, t_intervals)
+        input_data_2 = pd.DataFrame({'Sim2 Inputs': [annual_return_2,annual_std_2,annual_spending_2,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     elif spending_plan_2 == 'Variable (multiple spend rates)':
-        portfolio_real_df_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_variable(annual_return_2, annual_std_2, annual_spending_initial_2, annual_spending_initial_duration_2, annual_spending_final_2, rolling_quarters, cpi, t_intervals)
+        portfolio_real_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_variable(annual_return_2, annual_std_2, annual_spending_initial_2, annual_spending_initial_duration_2, annual_spending_final_2, rolling_quarters, cpi, t_intervals)
+        input_data_2 = pd.DataFrame({'Sim2 Inputs': [annual_return_2,annual_std_2,'NA', annual_spending_initial_2,annual_spending_initial_duration_2,annual_spending_final_2,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )    
 
     if spending_plan_3 == 'Constant (single spend rate)':
-        portfolio_real_df_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_constant(annual_return_3, annual_std_3, annual_spending_3, rolling_quarters, cpi, t_intervals)
-        
-    elif spending_plan_3 == 'Variable (multiple spend rates)':
-        portfolio_real_df_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_variable(annual_return_3, annual_std_3, annual_spending_initial_3, annual_spending_initial_duration_3, annual_spending_final_3, rolling_quarters, cpi, t_intervals)
+        portfolio_real_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_constant(annual_return_3, annual_std_3, annual_spending_3, rolling_quarters, cpi, t_intervals)
+        input_data_3 = pd.DataFrame({'Sim3 Inputs': [annual_return_3,annual_std_3,annual_spending_3,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
 
+    elif spending_plan_3 == 'Variable (multiple spend rates)':
+        portfolio_real_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_variable(annual_return_3, annual_std_3, annual_spending_initial_3, annual_spending_initial_duration_3, annual_spending_final_3, rolling_quarters, cpi, t_intervals)
+        input_data_3 = pd.DataFrame({'Sim3 Inputs': [annual_return_3,annual_std_3,'NA', annual_spending_initial_3,annual_spending_initial_duration_3,annual_spending_final_3,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
 
 
     # Takes the real portfolio market value results and organizes the output into a dataframe for the final ending market value only
     # if statements to allow flexibility if only 1 or 2 simulations conducted
 
-    s1_mv = pd.DataFrame(portfolio_real_df_1[-1], columns=['Sim1'])
+    s1_mv = pd.DataFrame(portfolio_real_1[-1], columns=['Sim1'])
     if spending_plan_2 is not '':
-        s2_mv = pd.DataFrame(portfolio_real_df_2[-1], columns=['Sim2'])
+        s2_mv = pd.DataFrame(portfolio_real_2[-1], columns=['Sim2'])
     if spending_plan_3 is not '':
-        s3_mv = pd.DataFrame(portfolio_real_df_3[-1], columns=['Sim3'])
+        s3_mv = pd.DataFrame(portfolio_real_3[-1], columns=['Sim3'])
 
     # Combines each simulation into 1 dataframe
     if spending_plan_2 is '':
         s_combined_mv = s1_mv
+        input_data = input_data_1
     elif spending_plan_3 is '':
         s_combined_mv = pd.concat([s1_mv,s2_mv], axis=1)
+        input_data = pd.concat([input_data_1, input_data_2], axis=1)
     else:
         s_combined_mv = pd.concat([s1_mv,s2_mv,s3_mv], axis=1)
+        input_data = pd.concat([input_data_1, input_data_2, input_data_3], axis=1)
+
 
     # Repeats the above process for the $ spending data
     # Code is slightly different than above given the output of the spending data being in a different format
@@ -431,13 +502,14 @@ if not nom_check and st.button('Compute'):
     else:
         output = pd.concat([percentiles_real_1, percentiles_real_spend_1, percentiles_real_2, percentiles_real_spend_2, percentiles_real_3, percentiles_real_spend_3], axis=1)
 
+    output_input = pd.concat([input_data, output], join = 'outer')
     # Function to download output as CSV
     @st.cache
     def convert_df(df):
     #IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv().encode('utf-8')
 
-    csv_output = convert_df(output)
+    csv_output = convert_df(output_input)
 
     st.write("Click to download results as a CSV")
     st.download_button(
@@ -454,41 +526,64 @@ if not nom_check and st.button('Compute'):
 
 elif nom_check and st.button('Compute'):
     if spending_plan_1 == 'Constant (single spend rate)':
-        portfolio_real_df_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_constant(annual_return_1, annual_std_1, annual_spending_1, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_df_1, spend_real_df_1, portfolio_nom_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_constant(annual_return_1, annual_std_1, annual_spending_1, rolling_quarters, cpi, t_intervals)
+        input_data_1 = pd.DataFrame({'Sim1': [annual_return_1,annual_std_1,annual_spending_1,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     elif spending_plan_1 == 'Variable (multiple spend rates)':
-        portfolio_real_df_1, spend_real_df_1, portfolio_nom_df_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_variable(annual_return_1, annual_std_1, annual_spending_initial_1, annual_spending_initial_duration_1, annual_spending_final_1, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_df_1, spend_real_df_1, portfolio_nom_1, spend_nom_df_1, percentiles_real_1, percentiles_real_spend_1, percentiles_nominal_1, percentiles_nom_spend_1 = compute_variable(annual_return_1, annual_std_1, annual_spending_initial_1, annual_spending_initial_duration_1, annual_spending_final_1, rolling_quarters, cpi, t_intervals)
+        input_data_1 = pd.DataFrame({'Sim1 Inputs': [annual_return_1,annual_std_1,'NA', annual_spending_initial_1,annual_spending_initial_duration_1,annual_spending_final_1,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     if spending_plan_2 == 'Constant (single spend rate)':
-        portfolio_real_df_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_constant(annual_return_2, annual_std_2, annual_spending_2, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_df_2, spend_real_df_2, portfolio_nom_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_constant(annual_return_2, annual_std_2, annual_spending_2, rolling_quarters, cpi, t_intervals)
+        input_data_2 = pd.DataFrame({'Sim2 Inputs': [annual_return_2,annual_std_2,annual_spending_2,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     elif spending_plan_2 == 'Variable (multiple spend rates)':
-        portfolio_real_df_2, spend_real_df_2, portfolio_nom_df_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_variable(annual_return_2, annual_std_2, annual_spending_initial_2, annual_spending_initial_duration_2, annual_spending_final_2, rolling_quarters, cpi, t_intervals)
+        portfolio_real_df_2, spend_real_df_2, portfolio_nom_2, spend_nom_df_2, percentiles_real_2, percentiles_real_spend_2, percentiles_nominal_2, percentiles_nom_spend_2 = compute_variable(annual_return_2, annual_std_2, annual_spending_initial_2, annual_spending_initial_duration_2, annual_spending_final_2, rolling_quarters, cpi, t_intervals)
+        input_data_2 = pd.DataFrame({'Sim2 Inputs': [annual_return_2,annual_std_2,'NA', annual_spending_initial_2,annual_spending_initial_duration_2,annual_spending_final_2,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
 
     if spending_plan_3 == 'Constant (single spend rate)':
-        portfolio_real_df_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_constant(annual_return_3, annual_std_3, annual_spending_3, rolling_quarters, cpi, t_intervals)
-        
+        portfolio_real_df_3, spend_real_df_3, portfolio_nom_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_constant(annual_return_3, annual_std_3, annual_spending_3, rolling_quarters, cpi, t_intervals)
+        input_data_3 = pd.DataFrame({'Sim3 Inputs': [annual_return_3,annual_std_3,annual_spending_3,'NA','NA','NA',rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
     elif spending_plan_3 == 'Variable (multiple spend rates)':
-        portfolio_real_df_3, spend_real_df_3, portfolio_nom_df_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_variable(annual_return_3, annual_std_3, annual_spending_initial_3, annual_spending_initial_duration_3, annual_spending_final_3, rolling_quarters, cpi, t_intervals)
+        portfolio_real_df_3, spend_real_df_3, portfolio_nom_3, spend_nom_df_3, percentiles_real_3, percentiles_real_spend_3, percentiles_nominal_3, percentiles_nom_spend_3 = compute_variable(annual_return_3, annual_std_3, annual_spending_initial_3, annual_spending_initial_duration_3, annual_spending_final_3, rolling_quarters, cpi, t_intervals)
+        input_data_3 = pd.DataFrame({'Sim3 Inputs': [annual_return_3,annual_std_3,'NA', annual_spending_initial_3,annual_spending_initial_duration_3,annual_spending_final_3,rolling_quarters,cpi,t_intervals]},
+            index = ['Annual Return', 'Annual Std.', 'Annual Spend Rate (if Constant)', 'Initial Spend Rate (if Variable)','Initial Spend Rate Duration (if Variable)','Long-Term Spend Rate (if Variable)','Rolling Period (Qtrs)', 'CPI', 'Simulation Period']
+            )
+
 
 
 
     # Takes the real portfolio market value results and organizes the output into a dataframe for the final ending market value only
     # if statements to allow flexibility if only 1 or 2 simulations conducted
 
-    s1_mv = pd.DataFrame(portfolio_nom_df_1[-1], columns=['Sim1'])
+    s1_mv = pd.DataFrame(portfolio_nom_1[-1], columns=['Sim1'])
     if spending_plan_2 is not '':
-        s2_mv = pd.DataFrame(portfolio_nom_df_2[-1], columns=['Sim2'])
+        s2_mv = pd.DataFrame(portfolio_nom_2[-1], columns=['Sim2'])
     if spending_plan_3 is not '':
-        s3_mv = pd.DataFrame(portfolio_nom_df_3[-1], columns=['Sim3'])
+        s3_mv = pd.DataFrame(portfolio_nom_3[-1], columns=['Sim3'])
 
     # Combines each simulation into 1 dataframe
     if spending_plan_2 is '':
         s_combined_mv = s1_mv
+        input_data = input_data_1
     elif spending_plan_3 is '':
         s_combined_mv = pd.concat([s1_mv,s2_mv], axis=1)
+        input_data = pd.concat([input_data_1, input_data_2], axis=1)
     else:
         s_combined_mv = pd.concat([s1_mv,s2_mv,s3_mv], axis=1)
+        input_data = pd.concat([input_data_1, input_data_2, input_data_3], axis=1)
+
 
     # Repeats the above process for the $ spending data
     # Code is slightly different than above given the output of the spending data being in a different format
@@ -608,13 +703,14 @@ elif nom_check and st.button('Compute'):
     else:
         output = pd.concat([percentiles_nominal_1, percentiles_nom_spend_1, percentiles_nominal_2, percentiles_nom_spend_2, percentiles_nominal_3, percentiles_nom_spend_3], axis=1)
 
+    output_input = pd.concat([input_data, output], join = 'outer')
     # Function to download output as CSV
     @st.cache
     def convert_df(df):
     #IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv().encode('utf-8')
 
-    csv_output = convert_df(output)
+    csv_output = convert_df(output_input)
 
     st.write("Click to download results as a CSV")
     st.download_button(
